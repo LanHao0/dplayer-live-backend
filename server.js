@@ -38,16 +38,19 @@ server.on('connection', function (ws, req) {
   let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
   ws.on('message', function (message) {
+    console.log(JSON.stringify(JSON.parse(message)))
     let time = Date.now();
     if (lastMsgTimestamps[ip] && lastMsgTimestamps[ip] - time < msgMinInterval) {
       return;
     }
+    let msg;
     try {
       message = JSON.parse(message);
       if (isNaN(message.color) || !typeRegExp.test(message.type) || !message.text) {
         return;
       }
-      var msg = {
+      msg = {
+        author:message.author?message.author:'游客 Guest',
         text: message.text,
         color: message.color,
         type: message.type
