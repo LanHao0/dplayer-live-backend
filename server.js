@@ -1,15 +1,14 @@
-var WebSocket = new require('ws');
+const WebSocket = new require('ws');
+const argv = require('minimist')(process.argv.slice(2), {string: ['port'], default: {port: 1207}});
 
-var argv = require('minimist')(process.argv.slice(2), {string: ['port'], default: {port: 1207}});
-
-var server = new WebSocket.Server({
+let server = new WebSocket.Server({
   clientTracking: true,
   port: argv['port']
 }, function () {
   console.log('WebSocket server started on port: ' + argv['port']);
 });
 
-var shutdown = function () {
+let shutdown = function () {
   console.log('Received kill signal, shutting down gracefully.');
 
   server.close(function () {
@@ -30,25 +29,26 @@ server.on('error', function (err) {
   console.log(err);
 });
 
-var hexColorRegExp = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-var typeRegExp = /^(top|bottom|right)$/;
-var msgMinInterval = 500;
-var lastMsgTimestamps = {};
+
+const typeRegExp = /^([012])$/;
+let msgMinInterval = 500;
+let lastMsgTimestamps = {};
 
 server.on('connection', function (ws, req) {
-  var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
   ws.on('message', function (message) {
-    var time = Date.now();
+    let time = Date.now();
     if (lastMsgTimestamps[ip] && lastMsgTimestamps[ip] - time < msgMinInterval) {
       return;
     }
     try {
       message = JSON.parse(message);
-      if (!hexColorRegExp.test(message.color) || !typeRegExp.test(message.type) || !message.text) {
+      if (isNaN(message.color) || !typeRegExp.test(message.type) || !message.text) {
         return;
       }
       var msg = {
-        text: message.text.substr(0, 255),
+        text: message.text,
         color: message.color,
         type: message.type
       };
@@ -56,11 +56,10 @@ server.on('connection', function (ws, req) {
       return;
     }
 
-    console.log(msg);
     lastMsgTimestamps[ip] = time;
 
-    var data = JSON.stringify(msg);
-
+    let data = JSON.stringify(msg);
+    console.log(ip + ' ' + data)
     server.clients.forEach(function (client) {
       if (client !== ws && client.readyState === WebSocket.OPEN) {
         client.send(data, function (err) {
@@ -73,7 +72,7 @@ server.on('connection', function (ws, req) {
 });
 
 setInterval(function () {
-  var time = Date.now();
+  let time = Date.now();
   Object.keys(lastMsgTimestamps).forEach(function (key) {
     if (time - lastMsgTimestamps[key] > msgMinInterval) {
       delete lastMsgTimestamps[key];
