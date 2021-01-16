@@ -37,6 +37,9 @@ let ipAddress = [];
 
 server.on('connection', function (ws, req) {
     let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    if (!ipAddress.includes(ip)) {
+        ipAddress.push(ip);
+    }
 
     ws.on('message', function (message) {
         if (message !== 'online') {
