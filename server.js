@@ -88,15 +88,15 @@ server.on('connection', function (ws, req) {
 });
 
 setInterval(function () {
-    console.log(ipAddress.length)
+    console.log(new Date().toISOString() + ipAddress.length)
     server.clients.forEach(function (client) {
-        if ( client.readyState === WebSocket.OPEN) {
+        if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({size: ipAddress.length}), function (err) {
                 err && console.log(err);
             });
         }
     });
-    ipAddress=[];
+    ipAddress = [];
 
 }, 5000)
 
