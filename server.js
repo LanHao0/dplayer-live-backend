@@ -1,18 +1,21 @@
 const WebSocket = new require('ws');
 const argv = require('minimist')(process.argv.slice(2), {string: ['port'], default: {port: 1207}});
+var log4js = require("log4js");
+var logger = log4js.getLogger();
+logger.level = "debug";
 
 let server = new WebSocket.Server({
     clientTracking: true,
     port: argv['port']
 }, function () {
-    console.log('WebSocket server started on port: ' + argv['port']);
+    logger.debug('WebSocket server started on port: ' + argv['port']);
 });
 
 let shutdown = function () {
-    console.log('Received kill signal, shutting down gracefully.');
+    logger.debug('Received kill signal, shutting down gracefully.');
 
     server.close(function () {
-        console.log('Closed out remaining connections.');
+        logger.debug('Closed out remaining connections.');
         process.exit();
     });
 
@@ -26,7 +29,7 @@ process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
 server.on('error', function (err) {
-    console.log(err);
+    logger.debug(err);
 });
 
 
@@ -43,7 +46,6 @@ server.on('connection', function (ws, req) {
 
     ws.on('message', function (message) {
         if (message !== 'online') {
-            console.log(JSON.stringify(JSON.parse(message)))
             let time = Date.now();
             if (lastMsgTimestamps[ip] && lastMsgTimestamps[ip] - time < msgMinInterval) {
                 return;
@@ -67,11 +69,11 @@ server.on('connection', function (ws, req) {
             lastMsgTimestamps[ip] = time;
 
             let data = JSON.stringify(msg);
-            console.log(ip + ' ' + data)
+            logger.debug(ip + ' ' + data)
             server.clients.forEach(function (client) {
                 if (client !== ws && client.readyState === WebSocket.OPEN) {
                     client.send(data, function (err) {
-                        err && console.log(err);
+                        err && logger.debug(err);
                     });
                 }
             });
@@ -82,17 +84,17 @@ server.on('connection', function (ws, req) {
         }
     });
 
-    ws.on('error', console.log);
+    ws.on('error', logger.error);
 
 
 });
 
 setInterval(function () {
-    console.log(new Date().toISOString() + ipAddress.length)
+    logger.debug(new Date().toISOString() +' : '+ ipAddress.length)
     server.clients.forEach(function (client) {
         if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({size: ipAddress.length}), function (err) {
-                err && console.log(err);
+                err && logger.error(err);
             });
         }
     });
