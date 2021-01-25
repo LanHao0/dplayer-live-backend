@@ -1,8 +1,12 @@
 const WebSocket = new require('ws');
 const argv = require('minimist')(process.argv.slice(2), {string: ['port'], default: {port: 1207}});
-var log4js = require("log4js");
-var logger = log4js.getLogger();
-logger.level = "debug";
+const log4js = require('log4js');
+log4js.configure({
+    appenders: {cheese: {type: 'file', filename: 'cheese.log'}},
+    categories: {default: {appenders: ['cheese'], level: 'error'}}
+});
+
+const logger = log4js.getLogger('cheese');
 
 let server = new WebSocket.Server({
     clientTracking: true,
@@ -29,7 +33,7 @@ process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
 server.on('error', function (err) {
-    logger.debug(err);
+    logger.error(err);
 });
 
 
@@ -69,11 +73,11 @@ server.on('connection', function (ws, req) {
             lastMsgTimestamps[ip] = time;
 
             let data = JSON.stringify(msg);
-            logger.debug(ip + ' ' + data)
+            logger.info(ip + ' ' + msg.author + ' ' + data)
             server.clients.forEach(function (client) {
                 if (client !== ws && client.readyState === WebSocket.OPEN) {
                     client.send(data, function (err) {
-                        err && logger.debug(err);
+                        err && logger.error(err);
                     });
                 }
             });
@@ -90,7 +94,7 @@ server.on('connection', function (ws, req) {
 });
 
 setInterval(function () {
-    logger.debug(new Date().toISOString() +' : '+ ipAddress.length)
+    logger.info(new Date().toISOString() + ' : ' + ipAddress.length)
     server.clients.forEach(function (client) {
         if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({size: ipAddress.length}), function (err) {
