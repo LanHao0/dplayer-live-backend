@@ -2,11 +2,19 @@ const WebSocket = new require('ws');
 const argv = require('minimist')(process.argv.slice(2), {string: ['port'], default: {port: 1207}});
 const log4js = require('log4js');
 log4js.configure({
-    appenders: {cheese: {type: 'file', filename: 'cheese.log'}},
-    categories: {default: {appenders: ['cheese'], level: 'error'}}
+    appenders: {
+        info: {type: 'file', filename: 'info.log'},
+        error: {type: 'file', filename: 'error.log'},
+    },
+    categories: {
+        error: {appenders: ['error'], level:'error'},
+        default:{appenders: ['info'], level:'info'},
+    }
 });
 
-const logger = log4js.getLogger('cheese');
+const errorLogger = log4js.getLogger('error');
+const logger = log4js.getLogger();
+
 
 let server = new WebSocket.Server({
     clientTracking: true,
@@ -33,7 +41,7 @@ process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
 server.on('error', function (err) {
-    logger.error(err);
+    errorLogger.error(err);
 });
 
 
@@ -73,11 +81,11 @@ server.on('connection', function (ws, req) {
             lastMsgTimestamps[ip] = time;
 
             let data = JSON.stringify(msg);
-            logger.info(ip + ' ' + msg.author + ' ' + data)
+            logger.info(ip + ' ' + data)
             server.clients.forEach(function (client) {
                 if (client !== ws && client.readyState === WebSocket.OPEN) {
                     client.send(data, function (err) {
-                        err && logger.error(err);
+                        err && errorLogger.error(err);
                     });
                 }
             });
@@ -88,17 +96,16 @@ server.on('connection', function (ws, req) {
         }
     });
 
-    ws.on('error', logger.error);
+    ws.on('error', errorLogger.error);
 
 
 });
 
 setInterval(function () {
-    logger.info(new Date().toISOString() + ' : ' + ipAddress.length)
     server.clients.forEach(function (client) {
         if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({size: ipAddress.length}), function (err) {
-                err && logger.error(err);
+                err && errorLogger.error(err);
             });
         }
     });
